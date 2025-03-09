@@ -1,12 +1,15 @@
 # JIRA MCP Implementation Plan
 
-## Current State (v0.3)
+## Current State (v0.4)
 - ✅ Basic MCP server structure working
 - ✅ Basic JIRA integration with get_issue tool
 - ✅ Search functionality with JQL support
 - ✅ Basic error handling and logging
 - ✅ Using stdio transport successfully
 - ✅ Basic authentication via environment variables
+- ✅ Create and update issue functionality
+- ✅ Field validation and custom fields support
+- ✅ Comment support for issue updates
 
 ## Implementation Steps
 
@@ -27,15 +30,16 @@ Completed: Basic JIRA integration with proper error handling and logging is work
 Success criteria: Can search JIRA issues using JQL ✅
 Completed: Search functionality is working with JQL, pagination, and field selection
 
-### 3. Core Issue Management (v0.4)
-- [ ] Add `create_issue` tool
-- [ ] Add issue type support
-- [ ] Add field validation
+### 3. Core Issue Management (v0.4) ✅
+- [x] Add `create_issue` tool
+- [x] Add issue type support
+- [x] Add field validation
+- [x] Add `update_issue` tool
+- [x] Add field update logic
+- [x] Add comment support
 - [ ] Add template support for common issue types
-- [ ] Add `update_issue` tool
-- [ ] Add field update logic
-- [ ] Add comment support
-Success criteria: Can create and update issues with all necessary fields
+Success criteria: Can create and update issues with all necessary fields ✅
+Completed: Create and update functionality working with field validation, custom fields, and comment support
 
 ### 4. Workflow Management (v0.5)
 - [ ] Add transition support
