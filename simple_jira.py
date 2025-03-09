@@ -17,13 +17,21 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Set up logging to stderr
+# Set up logging to both stderr and file
+log_dir = os.path.dirname(os.path.abspath(__file__))
+log_file = os.path.join(log_dir, "jira_mcp.log")
+os.makedirs(log_dir, exist_ok=True)
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stderr)]
+    handlers=[
+        logging.StreamHandler(sys.stderr),
+        logging.FileHandler(log_file)
+    ]
 )
 logger = logging.getLogger("simple_jira")
+logger.info(f"Logging initialized, writing to {log_file}")
 
 # Create the Typer app for CLI
 app = typer.Typer()
@@ -119,6 +127,12 @@ class UpdateIssueArgs(BaseModel):
                 raise ValueError("Comment cannot be empty if provided")
             return v.strip()
         return v
+
+class GetProjectsArgs(BaseModel):
+    """Arguments for the get_projects tool."""
+    include_archived: bool = Field(default=False, description="Whether to include archived projects")
+    max_results: int = Field(default=50, description="Maximum number of results to return", ge=1, le=100)
+    start_at: int = Field(default=0, description="Index of the first result to return", ge=0)
 
 class JiraClient:
     """Simple JIRA client."""
@@ -359,6 +373,52 @@ class JiraClient:
             logger.error(f"Error updating issue {issue_key}: {str(e)}")
             return {"error": f"Error updating issue: {str(e)}"}
 
+    def get_projects(self, include_archived: bool = False, max_results: int = 50, start_at: int = 0) -> Dict[str, Any]:
+        """Get list of JIRA projects."""
+        try:
+            if not self._client:
+                if not self.connect():
+                    return {"error": "Not connected to JIRA"}
+
+            # Get all projects
+            logger.debug("Fetching projects from JIRA...")
+            projects = self.client.projects()
+            logger.debug(f"Got projects response type: {type(projects)}")
+            if projects:
+                logger.debug(f"First project type: {type(projects[0])}")
+                logger.debug(f"First project dir: {dir(projects[0])}")
+            
+            # Apply pagination
+            total = len(projects)
+            projects = projects[start_at:start_at + max_results]
+            
+            # Format results
+            results = []
+            for project in projects:
+                # Get the basic project info that's always available
+                try:
+                    project_dict = {
+                        "key": project.key,
+                        "name": project.name,
+                        "id": str(project.id)
+                    }
+                    results.append(project_dict)
+                except Exception as e:
+                    logger.error(f"Error processing project: {str(e)}")
+                    logger.error(f"Project object: {project}")
+                    continue
+
+            return {
+                "total": total,
+                "start_at": start_at,
+                "max_results": max_results,
+                "projects": results
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting projects: {str(e)}")
+            return {"error": f"Error getting projects: {str(e)}"}
+
 # Define tool functions
 async def get_issue(arguments: Dict[str, Any]) -> bytes:
     """
@@ -512,6 +572,40 @@ async def update_issue(arguments: Dict[str, Any]) -> bytes:
         logger.error(f"Error in update_issue tool: {str(e)}", exc_info=True)
         return json.dumps({"error": str(e)}).encode()
 
+async def get_projects(arguments: Dict[str, Any]) -> bytes:
+    """
+    Get list of JIRA projects.
+    
+    Args:
+        arguments: A dictionary with:
+            - include_archived (bool, optional): Whether to include archived projects (default: False)
+            - max_results (int, optional): Maximum number of results to return (default: 50)
+            - start_at (int, optional): Index of the first result to return (default: 0)
+    """
+    try:
+        # Parse and validate arguments
+        args = GetProjectsArgs(**arguments) if arguments else GetProjectsArgs()
+        logger.debug(f"get_projects called with arguments: {args}")
+        
+        # Get JIRA configuration
+        config = JiraConfig()
+        client = JiraClient(config)
+        
+        # Get the projects
+        result = client.get_projects(
+            include_archived=args.include_archived,
+            max_results=args.max_results,
+            start_at=args.start_at
+        )
+        
+        logger.debug(f"Generated response: {result}")
+        
+        # Return the response as a JSON string
+        return json.dumps(result).encode()
+    except Exception as e:
+        logger.error(f"Error in get_projects tool: {str(e)}", exc_info=True)
+        return json.dumps({"error": str(e)}).encode()
+
 # Create the MCP server
 def create_server():
     # Create the server
@@ -599,6 +693,30 @@ Example:
     "labels": ["feature", "v0.4", "in-progress"],
     "comment": "Updated the implementation plan"
 }
+"""  # Description
+    )
+    mcp_server.add_tool(
+        get_projects,    # Function reference
+        name="get_projects",  # Tool name
+        description="""Get list of JIRA projects.
+
+Optional parameters:
+- include_archived: Whether to include archived projects (default: False)
+- max_results: Maximum number of results to return (default: 50, max: 100)
+- start_at: Index of the first result to return (default: 0)
+
+Returns project information including:
+- id: Project ID
+- key: Project key
+- name: Project name
+- description: Project description
+- lead: Project lead's display name
+- url: Project URL
+- style: Project style
+- archived: Whether the project is archived
+- category: Project category name
+- simplified: Whether the project is simplified
+- project_type_key: Project type key
 """  # Description
     )
     logger.info("Tools added successfully")
