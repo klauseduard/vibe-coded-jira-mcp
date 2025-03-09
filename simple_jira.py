@@ -58,6 +58,35 @@ class SearchIssuesArgs(BaseModel):
             raise ValueError("JQL query cannot be empty")
         return v.strip()
 
+class CreateIssueArgs(BaseModel):
+    """Arguments for the create_issue tool."""
+    project_key: str = Field(description="The project key (e.g. PROJ)")
+    summary: str = Field(description="Issue summary/title")
+    description: Optional[str] = Field(default=None, description="Issue description")
+    issue_type: str = Field(default="Task", description="Issue type (e.g. Bug, Task, Story)")
+    priority: Optional[str] = Field(default=None, description="Issue priority")
+    assignee: Optional[str] = Field(default=None, description="Username of the assignee")
+    labels: List[str] = Field(default=[], description="List of labels to add to the issue")
+    custom_fields: Dict[str, Any] = Field(default={}, description="Custom field values")
+
+    @field_validator('project_key')
+    def validate_project_key(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Project key cannot be empty")
+        return v.strip().upper()
+
+    @field_validator('summary')
+    def validate_summary(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Summary cannot be empty")
+        return v.strip()
+
+    @field_validator('issue_type')
+    def validate_issue_type(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Issue type cannot be empty")
+        return v.strip()
+
 class JiraClient:
     """Simple JIRA client."""
     
@@ -173,6 +202,62 @@ class JiraClient:
             logger.error(f"Error searching issues with JQL '{jql}': {str(e)}")
             return {"error": f"Error searching issues: {str(e)}"}
 
+    def create_issue(self,
+                    project_key: str,
+                    summary: str,
+                    description: Optional[str] = None,
+                    issue_type: str = "Task",
+                    priority: Optional[str] = None,
+                    assignee: Optional[str] = None,
+                    labels: List[str] = None,
+                    custom_fields: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Create a new JIRA issue."""
+        try:
+            if not self._client:
+                if not self.connect():
+                    return {"error": "Not connected to JIRA"}
+
+            # Prepare issue fields
+            issue_dict = {
+                'project': project_key,
+                'summary': summary,
+                'issuetype': {'name': issue_type}
+            }
+
+            # Add optional fields
+            if description:
+                issue_dict['description'] = description
+            if priority:
+                issue_dict['priority'] = {'name': priority}
+            if assignee:
+                issue_dict['assignee'] = {'name': assignee}
+            if labels:
+                issue_dict['labels'] = labels
+            if custom_fields:
+                issue_dict.update(custom_fields)
+
+            # Create the issue
+            issue = self.client.create_issue(fields=issue_dict)
+
+            # Return the created issue details
+            return {
+                "key": issue.key,
+                "summary": issue.fields.summary,
+                "description": issue.fields.description,
+                "status": issue.fields.status.name,
+                "assignee": issue.fields.assignee.displayName if issue.fields.assignee else None,
+                "reporter": issue.fields.reporter.displayName if issue.fields.reporter else None,
+                "created": issue.fields.created,
+                "updated": issue.fields.updated,
+                "issue_type": issue.fields.issuetype.name,
+                "priority": issue.fields.priority.name if issue.fields.priority else None,
+                "labels": issue.fields.labels
+            }
+
+        except Exception as e:
+            logger.error(f"Error creating issue: {str(e)}")
+            return {"error": f"Error creating issue: {str(e)}"}
+
 # Define tool functions
 async def get_issue(arguments: Dict[str, Any]) -> bytes:
     """
@@ -238,6 +323,50 @@ async def search_issues(arguments: Dict[str, Any]) -> bytes:
         logger.error(f"Error in search_issues tool: {str(e)}", exc_info=True)
         return json.dumps({"error": str(e)}).encode()
 
+async def create_issue(arguments: Dict[str, Any]) -> bytes:
+    """
+    Create a new JIRA issue.
+    
+    Args:
+        arguments: A dictionary with:
+            - project_key (str): The project key (e.g. PROJ)
+            - summary (str): Issue summary/title
+            - description (str, optional): Issue description
+            - issue_type (str, optional): Issue type (default: "Task")
+            - priority (str, optional): Issue priority
+            - assignee (str, optional): Username of the assignee
+            - labels (List[str], optional): List of labels
+            - custom_fields (Dict[str, Any], optional): Custom field values
+    """
+    try:
+        # Parse and validate arguments
+        args = CreateIssueArgs(**arguments)
+        logger.debug(f"create_issue called with arguments: {args}")
+        
+        # Get JIRA configuration
+        config = JiraConfig()
+        client = JiraClient(config)
+        
+        # Create the issue
+        result = client.create_issue(
+            project_key=args.project_key,
+            summary=args.summary,
+            description=args.description,
+            issue_type=args.issue_type,
+            priority=args.priority,
+            assignee=args.assignee,
+            labels=args.labels,
+            custom_fields=args.custom_fields
+        )
+        
+        logger.debug(f"Generated response: {result}")
+        
+        # Return the response as a JSON string
+        return json.dumps(result).encode()
+    except Exception as e:
+        logger.error(f"Error in create_issue tool: {str(e)}", exc_info=True)
+        return json.dumps({"error": str(e)}).encode()
+
 # Create the MCP server
 def create_server():
     # Create the server
@@ -267,6 +396,35 @@ Example JQL queries:
 - "project = EHEALTHDEV AND status = 'In Progress'"
 - "assignee = currentUser() ORDER BY created DESC"
 - "priority = Major AND created >= startOfDay(-7)"
+"""  # Description
+    )
+    mcp_server.add_tool(
+        create_issue,    # Function reference
+        name="create_issue",  # Tool name
+        description="""Create a new JIRA issue.
+
+Required parameters:
+- project_key: The project key (e.g. PROJ)
+- summary: Issue summary/title
+
+Optional parameters:
+- description: Issue description
+- issue_type: Issue type (default: "Task")
+- priority: Issue priority
+- assignee: Username of the assignee
+- labels: List of labels
+- custom_fields: Custom field values
+
+Example:
+{
+    "project_key": "PROJ",
+    "summary": "Implement new feature",
+    "description": "Add the ability to create issues",
+    "issue_type": "Task",
+    "priority": "High",
+    "assignee": "john.doe",
+    "labels": ["feature", "v0.4"]
+}
 """  # Description
     )
     logger.info("Tools added successfully")
