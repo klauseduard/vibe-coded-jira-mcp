@@ -87,6 +87,39 @@ class CreateIssueArgs(BaseModel):
             raise ValueError("Issue type cannot be empty")
         return v.strip()
 
+class UpdateIssueArgs(BaseModel):
+    """Arguments for the update_issue tool."""
+    issue_key: str = Field(description="The JIRA issue key (e.g. PROJ-123)")
+    summary: Optional[str] = Field(default=None, description="New issue summary/title")
+    description: Optional[str] = Field(default=None, description="New issue description")
+    priority: Optional[str] = Field(default=None, description="New issue priority")
+    assignee: Optional[str] = Field(default=None, description="New assignee username")
+    labels: Optional[List[str]] = Field(default=None, description="New list of labels")
+    comment: Optional[str] = Field(default=None, description="Comment to add to the issue")
+    custom_fields: Dict[str, Any] = Field(default={}, description="Custom field values to update")
+
+    @field_validator('issue_key')
+    def validate_issue_key(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Issue key cannot be empty")
+        return v.strip().upper()
+
+    @field_validator('summary')
+    def validate_summary(cls, v):
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Summary cannot be empty if provided")
+            return v.strip()
+        return v
+
+    @field_validator('comment')
+    def validate_comment(cls, v):
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Comment cannot be empty if provided")
+            return v.strip()
+        return v
+
 class JiraClient:
     """Simple JIRA client."""
     
@@ -258,6 +291,74 @@ class JiraClient:
             logger.error(f"Error creating issue: {str(e)}")
             return {"error": f"Error creating issue: {str(e)}"}
 
+    def update_issue(self,
+                    issue_key: str,
+                    summary: Optional[str] = None,
+                    description: Optional[str] = None,
+                    priority: Optional[str] = None,
+                    assignee: Optional[str] = None,
+                    labels: Optional[List[str]] = None,
+                    comment: Optional[str] = None,
+                    custom_fields: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Update a JIRA issue."""
+        try:
+            if not self._client:
+                if not self.connect():
+                    return {"error": "Not connected to JIRA"}
+
+            # Get the issue first
+            issue = self.client.issue(issue_key)
+            
+            # Prepare update fields
+            update_dict = {}
+            
+            # Handle standard fields
+            if summary is not None:
+                update_dict['summary'] = summary
+            if description is not None:
+                update_dict['description'] = description
+            if priority is not None:
+                update_dict['priority'] = {'name': priority}
+            if assignee is not None:
+                update_dict['assignee'] = {'name': assignee}
+            
+            # Update the issue fields
+            if update_dict:
+                issue.update(fields=update_dict)
+            
+            # Handle labels separately as they need special treatment
+            if labels is not None:
+                issue.update(fields={'labels': labels})
+            
+            # Add comment if provided
+            if comment:
+                issue.add_comment(comment)
+            
+            # Handle custom fields
+            if custom_fields:
+                issue.update(fields=custom_fields)
+
+            # Return the updated issue details
+            updated_issue = self.client.issue(issue_key)
+            return {
+                "key": updated_issue.key,
+                "summary": updated_issue.fields.summary,
+                "description": updated_issue.fields.description,
+                "status": updated_issue.fields.status.name,
+                "assignee": updated_issue.fields.assignee.displayName if updated_issue.fields.assignee else None,
+                "reporter": updated_issue.fields.reporter.displayName if updated_issue.fields.reporter else None,
+                "created": updated_issue.fields.created,
+                "updated": updated_issue.fields.updated,
+                "issue_type": updated_issue.fields.issuetype.name,
+                "priority": updated_issue.fields.priority.name if updated_issue.fields.priority else None,
+                "labels": updated_issue.fields.labels,
+                "comment_added": bool(comment)
+            }
+
+        except Exception as e:
+            logger.error(f"Error updating issue {issue_key}: {str(e)}")
+            return {"error": f"Error updating issue: {str(e)}"}
+
 # Define tool functions
 async def get_issue(arguments: Dict[str, Any]) -> bytes:
     """
@@ -367,6 +468,50 @@ async def create_issue(arguments: Dict[str, Any]) -> bytes:
         logger.error(f"Error in create_issue tool: {str(e)}", exc_info=True)
         return json.dumps({"error": str(e)}).encode()
 
+async def update_issue(arguments: Dict[str, Any]) -> bytes:
+    """
+    Update an existing JIRA issue.
+    
+    Args:
+        arguments: A dictionary with:
+            - issue_key (str): The JIRA issue key (e.g. PROJ-123)
+            - summary (str, optional): New issue summary/title
+            - description (str, optional): New issue description
+            - priority (str, optional): New issue priority
+            - assignee (str, optional): New assignee username
+            - labels (List[str], optional): New list of labels
+            - comment (str, optional): Comment to add to the issue
+            - custom_fields (Dict[str, Any], optional): Custom field values to update
+    """
+    try:
+        # Parse and validate arguments
+        args = UpdateIssueArgs(**arguments)
+        logger.debug(f"update_issue called with arguments: {args}")
+        
+        # Get JIRA configuration
+        config = JiraConfig()
+        client = JiraClient(config)
+        
+        # Update the issue
+        result = client.update_issue(
+            issue_key=args.issue_key,
+            summary=args.summary,
+            description=args.description,
+            priority=args.priority,
+            assignee=args.assignee,
+            labels=args.labels,
+            comment=args.comment,
+            custom_fields=args.custom_fields
+        )
+        
+        logger.debug(f"Generated response: {result}")
+        
+        # Return the response as a JSON string
+        return json.dumps(result).encode()
+    except Exception as e:
+        logger.error(f"Error in update_issue tool: {str(e)}", exc_info=True)
+        return json.dumps({"error": str(e)}).encode()
+
 # Create the MCP server
 def create_server():
     # Create the server
@@ -424,6 +569,35 @@ Example:
     "priority": "High",
     "assignee": "john.doe",
     "labels": ["feature", "v0.4"]
+}
+"""  # Description
+    )
+    mcp_server.add_tool(
+        update_issue,    # Function reference
+        name="update_issue",  # Tool name
+        description="""Update an existing JIRA issue.
+
+Required parameters:
+- issue_key: The JIRA issue key (e.g. PROJ-123)
+
+Optional parameters:
+- summary: New issue summary/title
+- description: New issue description
+- priority: New issue priority
+- assignee: New assignee username
+- labels: New list of labels
+- comment: Comment to add to the issue
+- custom_fields: Custom field values to update
+
+Example:
+{
+    "issue_key": "PROJ-123",
+    "summary": "Updated feature implementation",
+    "description": "Adding more capabilities to issue creation",
+    "priority": "High",
+    "assignee": "jane.doe",
+    "labels": ["feature", "v0.4", "in-progress"],
+    "comment": "Updated the implementation plan"
 }
 """  # Description
     )
