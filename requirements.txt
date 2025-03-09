@@ -1,0 +1,5 @@
+jira==3.5.2
+typer==0.9.0
+python-dotenv==1.0.1
+pydantic==2.6.1
+mcp[cli]==1.2.1 
