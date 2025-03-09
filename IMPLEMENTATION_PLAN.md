@@ -1,12 +1,12 @@
 # JIRA MCP Implementation Plan
 
-## Current State (v0.1)
-- Basic MCP server structure working
-- Single `get_issue` tool that returns TODO responses
-- No actual JIRA integration
-- No authentication
-- No error handling beyond basics
-- Using stdio transport
+## Current State (v0.3)
+- ✅ Basic MCP server structure working
+- ✅ Basic JIRA integration with get_issue tool
+- ✅ Search functionality with JQL support
+- ✅ Basic error handling and logging
+- ✅ Using stdio transport successfully
+- ✅ Basic authentication via environment variables
 
 ## Implementation Steps
 
@@ -27,67 +27,73 @@ Completed: Basic JIRA integration with proper error handling and logging is work
 Success criteria: Can search JIRA issues using JQL ✅
 Completed: Search functionality is working with JQL, pagination, and field selection
 
-### 3. Authentication & Security (v0.4)
-- [ ] Add API key verification for direct HTTP calls
+### 3. Core Issue Management (v0.4)
+- [ ] Add `create_issue` tool
+- [ ] Add issue type support
+- [ ] Add field validation
+- [ ] Add template support for common issue types
+- [ ] Add `update_issue` tool
+- [ ] Add field update logic
+- [ ] Add comment support
+Success criteria: Can create and update issues with all necessary fields
+
+### 4. Workflow Management (v0.5)
+- [ ] Add transition support
+- [ ] Add status updates
+- [ ] Add workflow validation
+- [ ] Add assignee management
+- [ ] Add watchers management
+Success criteria: Can manage issue workflows and assignments
+
+### 5. Project & Board Tools (v0.6)
+- [ ] Add `get_projects` tool
+- [ ] Add project metadata
+- [ ] Add board support
+- [ ] Add sprint management
+- [ ] Add filter support
+Success criteria: Can interact with JIRA projects and boards
+
+### 6. Performance & Resilience (v0.7)
+- [ ] Add response caching
+- [ ] Add batch operations
+- [ ] Add connection pooling
+- [ ] Add retry logic for JIRA operations
+- [ ] Add connection recovery
+Success criteria: Fast and reliable operations
+
+### 7. Enhanced Security (v0.8)
+- [ ] Add API key verification
 - [ ] Add secure credential handling
 - [ ] Add environment variable validation
 - [ ] Add connection state management
 - [ ] Add proper error messages for auth failures
-- Success criteria: Secure access to JIRA API
+Success criteria: Secure and robust access to JIRA API
 
-### 4. Transport & Protocol (v0.5)
+### 8. Advanced Transport (v0.9)
 - [ ] Add SSE transport support
 - [ ] Update mcp.json for SSE configuration
 - [ ] Add proper connection handling
 - [ ] Add reconnection logic
 - [ ] Add transport-specific error handling
-- Success criteria: Stable SSE connection with Cursor
+Success criteria: Stable alternative transport options
 
-### 5. Error Handling & Resilience (v0.6)
-- [ ] Add comprehensive error types
-- [ ] Add retry logic for JIRA operations
-- [ ] Add connection recovery
-- [ ] Add graceful degradation
-- [ ] Add detailed error logging
-- Success criteria: Graceful handling of all error cases
-
-### 6. Add Create Issue Tool (v0.7)
-- [ ] Add `create_issue` tool
-- [ ] Add issue type support
-- [ ] Add field validation
-- [ ] Add template support
-- Success criteria: Can create JIRA issues
-
-### 7. Add Update Issue Tool (v0.8)
-- [ ] Add `update_issue` tool
-- [ ] Add field update logic
-- [ ] Add transition support
-- [ ] Add comment support
-- Success criteria: Can update existing issues
-
-### 8. Add Project Tools (v0.9)
-- [ ] Add `get_projects` tool
-- [ ] Add project metadata
-- [ ] Add board support
-- [ ] Add filter support
-- Success criteria: Can interact with JIRA projects
-
-### 9. Performance & Caching (v1.0)
-- [ ] Add response caching
-- [ ] Add batch operations
-- [ ] Add connection pooling
-- [ ] Add performance logging
-- Success criteria: Fast and efficient operations
+### 9. Production Readiness (v1.0)
+- [ ] Add comprehensive metrics
+- [ ] Add health checks
+- [ ] Add performance monitoring
+- [ ] Add detailed logging
+- [ ] Add production deployment guide
+Success criteria: Production-ready with monitoring and maintenance tools
 
 ## Backtrack Points
 
 Each version represents a stable point to which we can backtrack if issues arise. Key backtrack points:
 
-1. **Base (v0.1)**: Current working version with TODO responses
-2. **JIRA Basic (v0.2)**: Basic JIRA integration working
-3. **Search (v0.3)**: Core JIRA operations working
-4. **Auth (v0.4)**: Security foundation working
-5. **Transport (v0.5)**: Communication layer working
+1. **Base (v0.3)**: Current working version with get_issue and search
+2. **Core (v0.4)**: Basic CRUD operations working
+3. **Workflow (v0.5)**: Issue management working
+4. **Projects (v0.6)**: Project operations working
+5. **Performance (v0.7)**: Optimized operations working
 
 ## Testing Strategy
 
@@ -102,11 +108,11 @@ For each step:
 ## Configuration Management
 
 mcp.json updates needed for each phase:
-1. v0.2: Add JIRA credentials
-2. v0.4: Add API key
-3. v0.5: Add SSE settings
-4. v0.8: Add project settings
-5. v0.9: Add performance settings
+1. v0.4: Add issue templates
+2. v0.5: Add workflow configs
+3. v0.6: Add project settings
+4. v0.7: Add performance settings
+5. v0.8: Add security settings
 
 ## Rollback Procedure
 
