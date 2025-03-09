@@ -1,6 +1,6 @@
 # JIRA MCP Implementation Plan
 
-## Current State (v0.4)
+## Current State (v0.4 + partial v0.6)
 - ✅ Basic MCP server structure working
 - ✅ Basic JIRA integration with get_issue tool
 - ✅ Search functionality with JQL support
@@ -10,6 +10,7 @@
 - ✅ Create and update issue functionality
 - ✅ Field validation and custom fields support
 - ✅ Comment support for issue updates
+- ✅ Project listing and metadata support
 
 ## Implementation Steps
 
@@ -49,13 +50,14 @@ Completed: Create and update functionality working with field validation, custom
 - [ ] Add watchers management
 Success criteria: Can manage issue workflows and assignments
 
-### 5. Project & Board Tools (v0.6)
-- [ ] Add `get_projects` tool
-- [ ] Add project metadata
+### 5. Project & Board Tools (v0.6) 🚧
+- [x] Add `get_projects` tool
+- [x] Add project metadata
 - [ ] Add board support
 - [ ] Add sprint management
 - [ ] Add filter support
 Success criteria: Can interact with JIRA projects and boards
+Completed so far: Basic project listing and metadata retrieval implemented
 
 ### 6. Performance & Resilience (v0.7)
 - [ ] Add response caching
