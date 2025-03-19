@@ -44,4 +44,4 @@ htmlcov/
 
 # Cache
 .cache/
-.pytest_cache/ 
+.pytest_cache/ .env

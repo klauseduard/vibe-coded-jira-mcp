@@ -1,6 +1,11 @@
 # JIRA MCP Server
 
-A simple [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) server for integrating JIRA with Cursor IDE. MCP is an open protocol that enables seamless integration between LLM applications and external data sources and tools.
+A simple [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) "vibe-coded" server for integrating JIRA with Cursor IDE. MCP is an open protocol that enables seamless integration between LLM applications and external data sources and tools.
+
+This implementation started out by discarding another JIRA MCP server that we failed to init in Cursor.
+
+BEWARE! Even this document is almost entirely written by AI coding assistant.
+
 
 ## Features
 
@@ -9,6 +14,7 @@ A simple [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol)
 - Configurable field selection
 - Pagination support
 - Detailed error handling and logging
+- Log work
 
 ## About MCP
 
