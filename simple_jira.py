@@ -134,6 +134,37 @@ class GetProjectsArgs(BaseModel):
     max_results: int = Field(default=50, description="Maximum number of results to return", ge=1, le=100)
     start_at: int = Field(default=0, description="Index of the first result to return", ge=0)
 
+class LogWorkArgs(BaseModel):
+    """Arguments for the log_work tool."""
+    issue_key: str = Field(description="The JIRA issue key (e.g., PROJ-123)")
+    time_spent: str = Field(description="Time spent in JIRA format (e.g., '2h 30m', '1d', '30m')")
+    comment: Optional[str] = Field(default=None, description="Optional comment for the work log")
+    started_at: Optional[str] = Field(default=None, description="When the work was started (defaults to now)")
+
+    @field_validator("issue_key")
+    def validate_issue_key(cls, v: str) -> str:
+        if not v or not "-" in v:
+            raise ValueError("Issue key must be in format PROJECT-123")
+        return v.upper()
+
+    @field_validator("time_spent")
+    def validate_time_spent(cls, v: str) -> str:
+        # Basic validation for time format
+        valid_units = ["w", "d", "h", "m"]
+        v = v.lower().strip()
+        parts = v.split()
+        
+        for part in parts:
+            if not any(part.endswith(unit) for unit in valid_units):
+                raise ValueError("Time must be specified in weeks (w), days (d), hours (h), or minutes (m)")
+            if not part[:-1].isdigit():
+                raise ValueError("Time value must be a number followed by unit (e.g., '2h', '30m')")
+        return v
+
+class JiraError(Exception):
+    """Error raised by JIRA operations."""
+    pass
+
 class JiraClient:
     """Simple JIRA client."""
     
@@ -419,7 +450,48 @@ class JiraClient:
             logger.error(f"Error getting projects: {str(e)}")
             return {"error": f"Error getting projects: {str(e)}"}
 
+    def log_work(self, args: LogWorkArgs) -> Dict[str, Any]:
+        """Log work on a JIRA issue."""
+        logger.info(f"Logging work on issue {args.issue_key}: {args.time_spent}")
+        
+        try:
+            if not self._client:
+                if not self.connect():
+                    return {"error": "Not connected to JIRA"}
+            
+            # Create worklog entry
+            worklog = self.client.add_worklog(
+                issue=args.issue_key,
+                timeSpent=args.time_spent,
+                comment=args.comment if args.comment else None,
+                started=args.started_at if args.started_at else None
+            )
+            
+            logger.info(f"Successfully logged work: {worklog.id}")
+            return {
+                "id": worklog.id,
+                "issue_key": args.issue_key,
+                "time_spent": args.time_spent,
+                "author": worklog.author.displayName,
+                "created": str(worklog.created)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error logging work: {str(e)}")
+            return {"error": f"Error logging work: {str(e)}"}
+
 # Define tool functions
+async def hello(arguments: Dict[str, Any]) -> bytes:
+    """Say hello to a name with optional enthusiasm."""
+    try:
+        name = arguments.get("name", "World")
+        enthusiastic = arguments.get("enthusiastic", False)
+        greeting = f"Hello, {name}{'!' if enthusiastic else '.'}"
+        return json.dumps({"greeting": greeting}).encode()
+    except Exception as e:
+        logger.error(f"Error in hello tool: {str(e)}", exc_info=True)
+        return json.dumps({"error": str(e)}).encode()
+
 async def get_issue(arguments: Dict[str, Any]) -> bytes:
     """
     Get a JIRA issue by key.
@@ -606,21 +678,60 @@ async def get_projects(arguments: Dict[str, Any]) -> bytes:
         logger.error(f"Error in get_projects tool: {str(e)}", exc_info=True)
         return json.dumps({"error": str(e)}).encode()
 
-# Create the MCP server
-def create_server():
-    # Create the server
-    mcp_server = FastMCP("SimpleJira", log_level="DEBUG")
+async def log_work(arguments: Dict[str, Any]) -> bytes:
+    """
+    Log work time on a JIRA issue.
     
-    # Add the tools
-    logger.info("Adding JIRA tools to MCP server...")
-    mcp_server.add_tool(
-        get_issue,    # Function reference
-        name="get_issue",  # Tool name
-        description="Get a JIRA issue by key"  # Description
+    Args:
+        arguments: A dictionary with:
+            - issue_key (str): The JIRA issue key (e.g., PROJ-123)
+            - time_spent (str): Time spent in JIRA format (e.g., '2h 30m', '1d', '30m')
+            - comment (str, optional): Comment for the work log
+            - started_at (str, optional): When the work was started (defaults to now)
+    """
+    try:
+        # Parse and validate arguments
+        args = LogWorkArgs(**arguments)
+        logger.debug(f"log_work called with arguments: {args}")
+        
+        # Get JIRA configuration
+        config = JiraConfig()
+        client = JiraClient(config)
+        
+        # Log the work
+        result = client.log_work(args)
+        
+        logger.debug(f"Generated response: {result}")
+        
+        # Return the response as a JSON string
+        return json.dumps(result).encode()
+    except Exception as e:
+        logger.error(f"Error in log_work tool: {str(e)}", exc_info=True)
+        return json.dumps({"error": str(e)}).encode()
+
+@app.command()
+def main(
+    transport: Transport = typer.Option(Transport.stdio, help="Transport to use"),
+    host: str = typer.Option("127.0.0.1", help="Host to listen on"),
+    port: int = typer.Option(8000, help="Port to listen on"),
+):
+    """Run the MCP server."""
+    mcp = FastMCP()
+
+    # Add tools
+    mcp.add_tool(
+        hello,
+        name="hello",
+        description="Say hello to a name with optional enthusiasm"
     )
-    mcp_server.add_tool(
-        search_issues,    # Function reference
-        name="search_issues",  # Tool name
+    mcp.add_tool(
+        get_issue,
+        name="get_issue",
+        description="Get a JIRA issue by key"
+    )
+    mcp.add_tool(
+        search_issues,
+        name="search_issues",
         description="""Search for JIRA issues using JQL (JIRA Query Language).
         
 Required parameters:
@@ -635,11 +746,11 @@ Example JQL queries:
 - "project = EHEALTHDEV AND status = 'In Progress'"
 - "assignee = currentUser() ORDER BY created DESC"
 - "priority = Major AND created >= startOfDay(-7)"
-"""  # Description
+"""
     )
-    mcp_server.add_tool(
-        create_issue,    # Function reference
-        name="create_issue",  # Tool name
+    mcp.add_tool(
+        create_issue,
+        name="create_issue",
         description="""Create a new JIRA issue.
 
 Required parameters:
@@ -664,11 +775,11 @@ Example:
     "assignee": "john.doe",
     "labels": ["feature", "v0.4"]
 }
-"""  # Description
+"""
     )
-    mcp_server.add_tool(
-        update_issue,    # Function reference
-        name="update_issue",  # Tool name
+    mcp.add_tool(
+        update_issue,
+        name="update_issue",
         description="""Update an existing JIRA issue.
 
 Required parameters:
@@ -693,11 +804,11 @@ Example:
     "labels": ["feature", "v0.4", "in-progress"],
     "comment": "Updated the implementation plan"
 }
-"""  # Description
+"""
     )
-    mcp_server.add_tool(
-        get_projects,    # Function reference
-        name="get_projects",  # Tool name
+    mcp.add_tool(
+        get_projects,
+        name="get_projects",
         description="""Get list of JIRA projects.
 
 Optional parameters:
@@ -717,32 +828,36 @@ Returns project information including:
 - category: Project category name
 - simplified: Whether the project is simplified
 - project_type_key: Project type key
-"""  # Description
+"""
     )
-    logger.info("Tools added successfully")
-    
-    return mcp_server
+    mcp.add_tool(
+        log_work,
+        name="log_work",
+        description="""Log work time on a JIRA issue.
 
-@app.command()
-def run(transport: Transport = Transport.stdio):
-    """Run the MCP server."""
-    logger.info(f"Starting Simple JIRA MCP server with {transport.value} transport...")
-    
-    # Test JIRA connection
-    try:
-        config = JiraConfig()
-        client = JiraClient(config)
-        if client.connect():
-            logger.info("Successfully connected to JIRA")
-        else:
-            logger.warning("Failed to connect to JIRA - check your credentials")
-    except Exception as e:
-        logger.error(f"Error connecting to JIRA: {str(e)}")
-        logger.warning("Server will start but JIRA operations may fail")
-    
-    # Create and run the server
-    mcp_server = create_server()
-    mcp_server.run(transport.value)
+Required parameters:
+- issue_key: The JIRA issue key (e.g., PROJ-123)
+- time_spent: Time spent in JIRA format (e.g., '2h 30m', '1d', '30m')
+
+Optional parameters:
+- comment: Comment for the work log
+- started_at: When the work was started (defaults to now)
+
+Example:
+{
+    "issue_key": "EHEALTHDEV-123",
+    "time_spent": "2h 30m",
+    "comment": "Implemented feature X",
+    "started_at": "2024-03-08T10:00:00"
+}
+"""
+    )
+
+    # Run server
+    if transport == Transport.stdio:
+        mcp.run(transport="stdio")
+    else:
+        mcp.run(transport="sse", host=host, port=port)
 
 if __name__ == "__main__":
     app() 
