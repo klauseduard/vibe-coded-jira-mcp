@@ -16,6 +16,32 @@ BEWARE! Even this document is almost entirely written by AI coding assistant.
 - Detailed error handling and logging
 - Log work
 
+## User Workflows
+
+### Search and Filter Flow
+
+```mermaid
+graph LR
+    A[Start Search] -->|Enter JQL| B[Search Query]
+    B -->|Apply Filters| C[Results]
+    C -->|Select Fields| D[Customized View]
+    D -->|Pagination| E[More Results]
+    
+    subgraph Search Options
+        F[JQL Query]
+        G[Field Selection]
+        H[Result Limit]
+        I[Start Position]
+    end
+    
+    B -->|Uses| F
+    C -->|Uses| G
+    C -->|Uses| H
+    C -->|Uses| I
+```
+
+For detailed technical architecture and system workflows, including issue lifecycle and authentication flows, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## About MCP
 
 This server implements the [Model Context Protocol](https://modelcontextprotocol.io) specification, allowing Cursor IDE to seamlessly interact with JIRA data through its AI features. The protocol standardizes how LLM applications communicate with external data sources and tools.
