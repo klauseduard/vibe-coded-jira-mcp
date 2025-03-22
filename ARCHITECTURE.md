@@ -43,6 +43,22 @@ graph TD
    - Configuration management through environment variables
    - Type-safe data structures for API requests/responses
 
+### About Pydantic
+
+Pydantic is a data validation library for Python that uses Python type annotations to validate data. In this project, it's used to:
+
+- Validate input data before sending to JIRA API
+- Ensure type safety throughout the application
+- Provide automatic data conversion and validation
+- Generate JSON schemas for API documentation
+- Handle configuration management
+
+For example, when creating a new issue, Pydantic validates:
+- Required fields are present
+- Field types are correct (e.g., strings, numbers)
+- Custom validation rules (e.g., project key format)
+- Optional fields with default values
+
 ## Issue Lifecycle
 
 The system supports a complete issue lifecycle, from creation through updates and work logging:
