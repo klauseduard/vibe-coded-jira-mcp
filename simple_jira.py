@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-A minimal, self-contained JIRA MCP server that just returns TODO responses.
+A small self-contained JIRA MCP server.
 """
 import sys
 import logging
