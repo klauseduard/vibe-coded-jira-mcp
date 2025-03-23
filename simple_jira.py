@@ -161,6 +161,42 @@ class LogWorkArgs(BaseModel):
                 raise ValueError("Time value must be a number followed by unit (e.g., '2h', '30m')")
         return v
 
+class CloneIssueArgs(BaseModel):
+    """Arguments for the clone_issue tool."""
+    source_issue_key: str = Field(description="The source JIRA issue key to clone from (e.g., PROJ-123)")
+    project_key: Optional[str] = Field(default=None, description="The target project key (e.g. PROJ) if different from source")
+    summary: Optional[str] = Field(default=None, description="New summary (defaults to 'Clone of [ORIGINAL-SUMMARY]')")
+    description: Optional[str] = Field(default=None, description="New description (defaults to original description)")
+    issue_type: Optional[str] = Field(default=None, description="Issue type (defaults to original issue type)")
+    priority: Optional[str] = Field(default=None, description="Issue priority (defaults to original priority)")
+    assignee: Optional[str] = Field(default=None, description="Username of the assignee (defaults to original assignee)")
+    labels: Optional[List[str]] = Field(default=None, description="List of labels (defaults to original labels)")
+    custom_fields: Dict[str, Any] = Field(default={}, description="Custom field values to override")
+    copy_attachments: bool = Field(default=False, description="Whether to copy attachments from the source issue")
+    add_link_to_source: bool = Field(default=True, description="Whether to add a link to the source issue")
+
+    @field_validator("source_issue_key")
+    def validate_source_issue_key(cls, v: str) -> str:
+        if not v or not "-" in v:
+            raise ValueError("Source issue key must be in format PROJECT-123")
+        return v.upper()
+
+    @field_validator("project_key")
+    def validate_project_key(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Project key cannot be empty if provided")
+            return v.strip().upper()
+        return v
+
+    @field_validator("summary")
+    def validate_summary(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Summary cannot be empty if provided")
+            return v.strip()
+        return v
+
 class JiraError(Exception):
     """Error raised by JIRA operations."""
     pass
@@ -480,6 +516,158 @@ class JiraClient:
             logger.error(f"Error logging work: {str(e)}")
             return {"error": f"Error logging work: {str(e)}"}
 
+    def clone_issue(self, args: CloneIssueArgs) -> Dict[str, Any]:
+        """Clone a JIRA issue."""
+        logger.info(f"Cloning issue {args.source_issue_key}")
+        
+        try:
+            if not self._client:
+                if not self.connect():
+                    return {"error": "Not connected to JIRA"}
+            
+            # Get the source issue
+            source_issue = self.client.issue(args.source_issue_key)
+            
+            # Extract data from source issue
+            source_project = source_issue.fields.project.key
+            target_project = args.project_key or source_project
+            
+            # Prepare issue fields
+            issue_dict = {
+                'project': target_project,
+                'summary': args.summary or f"Clone of {source_issue.fields.summary}",
+                'issuetype': {'name': args.issue_type or source_issue.fields.issuetype.name}
+            }
+
+            # Add description
+            if args.description is not None:
+                issue_dict['description'] = args.description
+            else:
+                issue_dict['description'] = source_issue.fields.description
+
+            # Add priority if available
+            if args.priority is not None:
+                issue_dict['priority'] = {'name': args.priority}
+            elif hasattr(source_issue.fields, 'priority') and source_issue.fields.priority:
+                issue_dict['priority'] = {'name': source_issue.fields.priority.name}
+
+            # Add assignee if available
+            if args.assignee is not None:
+                issue_dict['assignee'] = {'name': args.assignee}
+            elif hasattr(source_issue.fields, 'assignee') and source_issue.fields.assignee:
+                # Handle different ways JIRA might represent users
+                if hasattr(source_issue.fields.assignee, 'accountId'):
+                    issue_dict['assignee'] = {'accountId': source_issue.fields.assignee.accountId}
+                elif hasattr(source_issue.fields.assignee, 'key'):
+                    issue_dict['assignee'] = {'key': source_issue.fields.assignee.key}
+                elif hasattr(source_issue.fields.assignee, 'name'):
+                    issue_dict['assignee'] = {'name': source_issue.fields.assignee.name}
+
+            # Add labels if available
+            if args.labels is not None:
+                issue_dict['labels'] = args.labels
+            elif hasattr(source_issue.fields, 'labels') and source_issue.fields.labels:
+                issue_dict['labels'] = source_issue.fields.labels
+
+            # Handle custom fields - copy over from source issue
+            custom_field_prefixes = ['customfield_']
+            source_custom_fields = {}
+            
+            # Extract custom fields from source issue
+            for field_name in dir(source_issue.fields):
+                if any(field_name.startswith(prefix) for prefix in custom_field_prefixes):
+                    field_value = getattr(source_issue.fields, field_name)
+                    if field_value is not None:
+                        # Handle complex field values that might be objects
+                        if hasattr(field_value, 'id'):
+                            source_custom_fields[field_name] = {'id': field_value.id}
+                        elif hasattr(field_value, 'value'):
+                            source_custom_fields[field_name] = {'value': field_value.value}
+                        elif hasattr(field_value, 'name'):
+                            source_custom_fields[field_name] = {'name': field_value.name}
+                        else:
+                            source_custom_fields[field_name] = field_value
+            
+            # Use custom fields from source issue, overridden by any explicitly set fields
+            issue_dict.update(source_custom_fields)
+            
+            # Override with user-specified custom fields
+            if args.custom_fields:
+                issue_dict.update(args.custom_fields)
+            
+            # Collect information about source issue for reference
+            source_info = {
+                "key": source_issue.key,
+                "summary": source_issue.fields.summary,
+                "project": source_project,
+                "issue_type": source_issue.fields.issuetype.name,
+                "status": source_issue.fields.status.name,
+                "priority": source_issue.fields.priority.name if hasattr(source_issue.fields, 'priority') and source_issue.fields.priority else None,
+                "assignee": source_issue.fields.assignee.displayName if hasattr(source_issue.fields, 'assignee') and source_issue.fields.assignee else None,
+                "reporter": source_issue.fields.reporter.displayName if hasattr(source_issue.fields, 'reporter') and source_issue.fields.reporter else None,
+                "created": source_issue.fields.created,
+                "updated": source_issue.fields.updated,
+                "custom_fields": source_custom_fields
+            }
+
+            # Create the new issue
+            new_issue = self.client.create_issue(fields=issue_dict)
+            
+            # Add link to source issue if requested
+            if args.add_link_to_source:
+                try:
+                    self.client.create_issue_link(
+                        type="Cloned",
+                        inwardIssue=new_issue.key,
+                        outwardIssue=source_issue.key,
+                        comment={
+                            "body": f"This issue was cloned from {source_issue.key}."
+                        }
+                    )
+                    logger.info(f"Added link from {new_issue.key} to source issue {source_issue.key}")
+                except Exception as e:
+                    logger.warning(f"Failed to create issue link: {str(e)}")
+            
+            # Copy attachments if requested
+            if args.copy_attachments:
+                try:
+                    attachments = source_issue.fields.attachment
+                    if attachments:
+                        for attachment in attachments:
+                            # Download the attachment
+                            attachment_data = self.client.attachment(attachment.id)
+                            
+                            # Upload to the new issue
+                            self.client.add_attachment(
+                                issue=new_issue.key,
+                                attachment=attachment_data.get()
+                            )
+                        logger.info(f"Copied {len(attachments)} attachments to {new_issue.key}")
+                except Exception as e:
+                    logger.warning(f"Failed to copy attachments: {str(e)}")
+            
+            # Return the created issue details along with source info
+            return {
+                "key": new_issue.key,
+                "summary": new_issue.fields.summary,
+                "description": new_issue.fields.description,
+                "status": new_issue.fields.status.name,
+                "assignee": new_issue.fields.assignee.displayName if hasattr(new_issue.fields, 'assignee') and new_issue.fields.assignee else None,
+                "reporter": new_issue.fields.reporter.displayName if hasattr(new_issue.fields, 'reporter') and new_issue.fields.reporter else None,
+                "created": new_issue.fields.created,
+                "updated": new_issue.fields.updated,
+                "issue_type": new_issue.fields.issuetype.name,
+                "priority": new_issue.fields.priority.name if hasattr(new_issue.fields, 'priority') and new_issue.fields.priority else None,
+                "labels": new_issue.fields.labels if hasattr(new_issue.fields, 'labels') else [],
+                "source_issue": source_info,
+                "attachments_copied": args.copy_attachments,
+                "link_added": args.add_link_to_source
+            }
+            
+        except Exception as e:
+            logger.error(f"Error cloning issue: {str(e)}")
+            return {"error": f"Error cloning issue: {str(e)}"}
+
 # Define tool functions
 async def hello(arguments: Dict[str, Any]) -> bytes:
     """Say hello to a name with optional enthusiasm."""
@@ -678,6 +866,44 @@ async def get_projects(arguments: Dict[str, Any]) -> bytes:
         logger.error(f"Error in get_projects tool: {str(e)}", exc_info=True)
         return json.dumps({"error": str(e)}).encode()
 
+async def clone_issue(arguments: Dict[str, Any]) -> bytes:
+    """
+    Clone an existing JIRA issue.
+    
+    Args:
+        arguments: A dictionary with:
+            - source_issue_key: The source JIRA issue key to clone from (e.g., PROJ-123)
+            - project_key: The target project key if different from source
+            - summary: New summary (defaults to 'Clone of [ORIGINAL-SUMMARY]')
+            - description: New description (defaults to original description)
+            - issue_type: Issue type (defaults to original issue type)
+            - priority: Issue priority (defaults to original priority)
+            - assignee: Username of the assignee (defaults to original assignee)
+            - labels: List of labels (defaults to original labels)
+            - custom_fields: Custom field values to override
+            - copy_attachments: Whether to copy attachments from the source issue (default: false)
+            - add_link_to_source: Whether to add a link to the source issue (default: true)
+    """
+    try:
+        # Parse and validate arguments
+        args = CloneIssueArgs(**arguments)
+        logger.debug(f"clone_issue called with arguments: {args}")
+        
+        # Get JIRA configuration
+        config = JiraConfig()
+        client = JiraClient(config)
+        
+        # Clone the issue
+        result = client.clone_issue(args)
+        
+        logger.debug(f"Generated response: {result}")
+        
+        # Return the response as a JSON string
+        return json.dumps(result).encode()
+    except Exception as e:
+        logger.error(f"Error in clone_issue tool: {str(e)}", exc_info=True)
+        return json.dumps({"error": str(e)}).encode()
+
 async def log_work(arguments: Dict[str, Any]) -> bytes:
     """
     Log work time on a JIRA issue.
@@ -828,6 +1054,40 @@ Returns project information including:
 - category: Project category name
 - simplified: Whether the project is simplified
 - project_type_key: Project type key
+"""
+    )
+    mcp.add_tool(
+        clone_issue,
+        name="clone_issue",
+        description="""Clone an existing JIRA issue.
+
+Required parameters:
+- source_issue_key: The source JIRA issue key to clone from (e.g., PROJ-123)
+
+Optional parameters:
+- project_key: The target project key if different from source
+- summary: New summary (defaults to 'Clone of [ORIGINAL-SUMMARY]')
+- description: New description (defaults to original description)
+- issue_type: Issue type (defaults to original issue type)
+- priority: Issue priority (defaults to original priority)
+- assignee: Username of the assignee (defaults to original assignee)
+- labels: List of labels (defaults to original labels)
+- custom_fields: Custom field values to override
+- copy_attachments: Whether to copy attachments from the source issue (default: false)
+- add_link_to_source: Whether to add a link to the source issue (default: true)
+
+Example:
+{
+    "source_issue_key": "PROJ-123",
+    "project_key": "NEWPROJ",
+    "summary": "Cloned issue with modifications",
+    "assignee": "jane.doe",
+    "copy_attachments": true,
+    "custom_fields": {
+        "customfield_10001": "High",
+        "customfield_10002": "Backend"
+    }
+}
 """
     )
     mcp.add_tool(
