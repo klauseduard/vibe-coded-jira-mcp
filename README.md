@@ -11,6 +11,8 @@ BEWARE! Even this document is almost entirely written by AI coding assistant.
 
 - Get JIRA issues by key
 - Search issues using JQL (JIRA Query Language)
+- Create and update issues
+- Clone issues (helpful to work around mandatory custom fields)
 - Configurable field selection
 - Pagination support
 - Detailed error handling and logging
@@ -38,6 +40,27 @@ graph LR
     C -->|Uses| G
     C -->|Uses| H
     C -->|Uses| I
+```
+
+### Issue Cloning Flow
+
+```mermaid
+graph LR
+    A[Find Source Issue] -->|Copy Key| B[Clone Issue]
+    B -->|Customize Fields| C[Modified Clone]
+    C -->|Create| D[New Issue]
+    
+    subgraph Clone Options
+        E[Change Project]
+        F[Modify Fields]
+        G[Copy Attachments]
+        H[Add Source Link]
+    end
+    
+    B -->|Can Use| E
+    B -->|Can Use| F
+    B -->|Can Use| G
+    B -->|Can Use| H
 ```
 
 For detailed technical architecture and system workflows, including issue lifecycle and authentication flows, see [ARCHITECTURE.md](ARCHITECTURE.md).

@@ -89,6 +89,19 @@ sequenceDiagram
     MCP-->>CLI: Success
     CLI-->>User: Issue Updated
 
+    User->>CLI: Clone Issue
+    CLI->>MCP: clone_issue
+    MCP->>JiraClient: clone_issue
+    JiraClient->>JIRA: GET /issue/{source_key}
+    JIRA-->>JiraClient: Source Issue Data
+    JiraClient->>JIRA: POST /issue
+    JIRA-->>JiraClient: Clone Created
+    JiraClient->>JIRA: POST /issueLink
+    JIRA-->>JiraClient: Link Created
+    JiraClient-->>MCP: Response
+    MCP-->>CLI: Success
+    CLI-->>User: Issue Cloned
+
     User->>CLI: Log Work
     CLI->>MCP: log_work
     MCP->>JiraClient: log_work
@@ -111,7 +124,15 @@ sequenceDiagram
    - Supports partial updates
    - Maintains issue history
 
-3. **Work Logging**
+3. **Issue Cloning**
+   - Creates a copy of an existing issue
+   - Carries over all fields from source, including custom fields
+   - Optionally copies attachments
+   - Optionally creates a link to source issue
+   - Allows field overrides (summary, description, etc.)
+   - Helps work around mandatory custom fields in JIRA projects
+
+4. **Work Logging**
    - Tracks time spent on issues
    - Supports work descriptions
    - Maintains worklog history

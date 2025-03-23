@@ -11,6 +11,7 @@
 - ✅ Field validation and custom fields support
 - ✅ Comment support for issue updates
 - ✅ Project listing and metadata support
+- ✅ Clone issue functionality with custom field preservation
 
 ## Implementation Steps
 
@@ -38,9 +39,10 @@ Completed: Search functionality is working with JQL, pagination, and field selec
 - [x] Add `update_issue` tool
 - [x] Add field update logic
 - [x] Add comment support
+- [x] Add `clone_issue` tool for working around mandatory fields
 - [ ] Add template support for common issue types
-Success criteria: Can create and update issues with all necessary fields ✅
-Completed: Create and update functionality working with field validation, custom fields, and comment support
+Success criteria: Can create, update, and clone issues with all necessary fields ✅
+Completed: Create, update, and clone functionality working with field validation, custom fields, and comment support
 
 ### 4. Workflow Management (v0.5)
 - [ ] Add transition support
