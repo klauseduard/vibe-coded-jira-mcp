@@ -669,17 +669,6 @@ class JiraClient:
             return {"error": f"Error cloning issue: {str(e)}"}
 
 # Define tool functions
-async def hello(arguments: Dict[str, Any]) -> bytes:
-    """Say hello to a name with optional enthusiasm."""
-    try:
-        name = arguments.get("name", "World")
-        enthusiastic = arguments.get("enthusiastic", False)
-        greeting = f"Hello, {name}{'!' if enthusiastic else '.'}"
-        return json.dumps({"greeting": greeting}).encode()
-    except Exception as e:
-        logger.error(f"Error in hello tool: {str(e)}", exc_info=True)
-        return json.dumps({"error": str(e)}).encode()
-
 async def get_issue(arguments: Dict[str, Any]) -> bytes:
     """
     Get a JIRA issue by key.
@@ -945,11 +934,6 @@ def main(
     mcp = FastMCP()
 
     # Add tools
-    mcp.add_tool(
-        hello,
-        name="hello",
-        description="Say hello to a name with optional enthusiasm"
-    )
     mcp.add_tool(
         get_issue,
         name="get_issue",
