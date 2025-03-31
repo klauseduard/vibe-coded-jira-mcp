@@ -160,6 +160,18 @@ class LogWorkArgs(BaseModel):
             if not part[:-1].isdigit():
                 raise ValueError("Time value must be a number followed by unit (e.g., '2h', '30m')")
         return v
+        
+class GetCommentsArgs(BaseModel):
+    """Arguments for the get_comments tool."""
+    issue_key: str = Field(description="The JIRA issue key (e.g., PROJ-123)")
+    max_results: int = Field(default=50, description="Maximum number of comments to return", ge=1, le=100)
+    start_at: int = Field(default=0, description="Index of the first comment to return", ge=0)
+    
+    @field_validator("issue_key")
+    def validate_issue_key(cls, v: str) -> str:
+        if not v or not "-" in v:
+            raise ValueError("Issue key must be in format PROJECT-123")
+        return v.upper()
 
 class CloneIssueArgs(BaseModel):
     """Arguments for the clone_issue tool."""
@@ -515,6 +527,54 @@ class JiraClient:
         except Exception as e:
             logger.error(f"Error logging work: {str(e)}")
             return {"error": f"Error logging work: {str(e)}"}
+            
+    def get_comments(self, args: GetCommentsArgs) -> Dict[str, Any]:
+        """Get comments for a JIRA issue."""
+        logger.info(f"Getting comments for issue {args.issue_key}")
+        
+        try:
+            if not self._client:
+                if not self.connect():
+                    return {"error": "Not connected to JIRA"}
+                    
+            # Get the issue
+            issue = self.client.issue(args.issue_key)
+            
+            # Get comments
+            comments = self.client.comments(issue)
+            
+            # Apply pagination
+            total = len(comments)
+            paginated_comments = comments[args.start_at:args.start_at + args.max_results]
+            
+            # Format the comments
+            formatted_comments = []
+            for comment in paginated_comments:
+                formatted_comment = {
+                    "id": comment.id,
+                    "author": comment.author.displayName if hasattr(comment.author, 'displayName') else str(comment.author),
+                    "body": comment.body,
+                    "created": str(comment.created),
+                    "updated": str(comment.updated) if hasattr(comment, 'updated') else None,
+                }
+                
+                # Add any additional fields that might be useful
+                if hasattr(comment, 'visibility') and comment.visibility:
+                    formatted_comment["visibility"] = comment.visibility
+                    
+                formatted_comments.append(formatted_comment)
+                
+            return {
+                "issue_key": args.issue_key,
+                "total": total,
+                "start_at": args.start_at,
+                "max_results": args.max_results,
+                "comments": formatted_comments
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting comments: {str(e)}")
+            return {"error": f"Error getting comments: {str(e)}"}
 
     def clone_issue(self, args: CloneIssueArgs) -> Dict[str, Any]:
         """Clone a JIRA issue."""
@@ -923,6 +983,36 @@ async def log_work(arguments: Dict[str, Any]) -> bytes:
     except Exception as e:
         logger.error(f"Error in log_work tool: {str(e)}", exc_info=True)
         return json.dumps({"error": str(e)}).encode()
+        
+async def get_comments(arguments: Dict[str, Any]) -> bytes:
+    """
+    Get comments for a JIRA issue.
+    
+    Args:
+        arguments: A dictionary with:
+            - issue_key (str): The JIRA issue key (e.g., PROJ-123)
+            - max_results (int, optional): Maximum number of comments to return (default: 50)
+            - start_at (int, optional): Index of the first comment to return (default: 0)
+    """
+    try:
+        # Parse and validate arguments
+        args = GetCommentsArgs(**arguments)
+        logger.debug(f"get_comments called with arguments: {args}")
+        
+        # Get JIRA configuration
+        config = JiraConfig()
+        client = JiraClient(config)
+        
+        # Get the comments
+        result = client.get_comments(args)
+        
+        logger.debug(f"Generated response: {result}")
+        
+        # Return the response as a JSON string
+        return json.dumps(result).encode()
+    except Exception as e:
+        logger.error(f"Error in get_comments tool: {str(e)}", exc_info=True)
+        return json.dumps({"error": str(e)}).encode()
 
 @app.command()
 def main(
@@ -1094,6 +1184,39 @@ Example:
     "comment": "Implemented feature X",
     "started_at": "2024-03-08T10:00:00"
 }
+"""
+    )
+    mcp.add_tool(
+        get_comments,
+        name="get_comments",
+        description="""Get comments for a JIRA issue.
+
+Required parameters:
+- issue_key: The JIRA issue key (e.g., PROJ-123)
+
+Optional parameters:
+- max_results: Maximum number of comments to return (default: 50, max: 100)
+- start_at: Index of the first comment to return (default: 0)
+
+Example:
+{
+    "issue_key": "PROJ-123",
+    "max_results": 20,
+    "start_at": 0
+}
+
+Returns:
+- issue_key: The issue key
+- total: Total number of comments for the issue
+- start_at: Index of the first comment returned
+- max_results: Maximum number of comments returned
+- comments: Array of comment objects with:
+  - id: Comment ID
+  - author: Display name of the comment author
+  - body: Text content of the comment
+  - created: Creation timestamp
+  - updated: Last update timestamp (if available)
+  - visibility: Visibility restrictions (if any)
 """
     )
 
