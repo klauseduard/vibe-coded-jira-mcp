@@ -11,8 +11,9 @@ BEWARE! Even this document is almost entirely written by AI coding assistant.
 
 - Get JIRA issues by key
 - Search issues using JQL (JIRA Query Language)
-- Create and update issues
-- Clone issues (helpful to work around mandatory custom fields)
+- Create and update issues (note: may have limitations with heavily customized JIRA projects)
+- Add comments to issues
+- Clone issues (useful for working around mandatory custom fields, but may have limitations with complex project configurations)
 - Configurable field selection
 - Pagination support
 - Detailed error handling and logging
@@ -101,9 +102,12 @@ Run the server:
 
 The project follows the implementation plan outlined in `IMPLEMENTATION_PLAN.md`.
 
-Current version: v0.3
+Current version: v0.4
 - ✅ Basic JIRA integration
 - ✅ Search functionality with JQL support
+- ✅ Issue management (create, update, clone) with limitations for heavily customized projects
+- ✅ Comment functionality
+- ✅ Work logging
 
 ## Related Links
 
