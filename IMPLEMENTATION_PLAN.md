@@ -10,8 +10,10 @@
 - ✅ Create and update issue functionality
 - ✅ Field validation and custom fields support
 - ✅ Comment support for issue updates
+- ✅ Dedicated add_comment tool for adding comments to issues
 - ✅ Project listing and metadata support
 - ✅ Clone issue functionality with custom field preservation
+- ✅ Log work functionality to track time spent on issues
 
 ## Implementation Steps
 
@@ -38,13 +40,15 @@ Completed: Search functionality is working with JQL, pagination, and field selec
 - [x] Add field validation
 - [x] Add `update_issue` tool
 - [x] Add field update logic
-- [x] Add comment support
+- [x] Add comment support in update_issue
+- [x] Add dedicated `add_comment` tool for adding comments to issues
+- [x] Add `log_work` tool for time tracking
 - [x] Add `clone_issue` tool for working around mandatory fields
-- [x] Add `get_comments` tool to read issue comments
+- [ ] Add `get_comments` tool to read issue comments 
 - [ ] Add ability to fetch attachments (including images) from issues
 - [ ] Add template support for common issue types
 Success criteria: Can create, update, and clone issues with all necessary fields ✅
-Completed: Create, update, and clone functionality working with field validation, custom fields, and comment support
+Completed: Create, update, clone, add comments, and log work functionality working with field validation, custom fields, and proper error handling
 
 ### 4. Workflow Management (v0.5)
 - [ ] Add transition support
@@ -99,10 +103,13 @@ Success criteria: Production-ready with monitoring and maintenance tools
 
 Each version represents a stable point to which we can backtrack if issues arise. Key backtrack points:
 
-1. **Base (v0.3)**: Current working version with get_issue and search
-2. **Core (v0.4)**: Basic CRUD operations working
+1. **Base (v0.3)**: Working version with get_issue and search
+2. **Core (v0.4)**: Basic CRUD operations working (current stable version)
+   - Create, update, clone issues
+   - Add comments to issues
+   - Log work on issues
 3. **Workflow (v0.5)**: Issue management working
-4. **Projects (v0.6)**: Project operations working
+4. **Projects (v0.6)**: Project operations working (partially implemented)
 5. **Performance (v0.7)**: Optimized operations working
 
 ## Testing Strategy
