@@ -173,6 +173,24 @@ class GetCommentsArgs(BaseModel):
             raise ValueError("Issue key must be in format PROJECT-123")
         return v.upper()
 
+class CommentArgs(BaseModel):
+    """Arguments for the add_comment tool."""
+    issue_key: str = Field(description="The JIRA issue key (e.g., PROJ-123)")
+    comment: str = Field(description="Comment text to add to the issue")
+    visibility: Optional[Dict[str, str]] = Field(default=None, description="Visibility settings for the comment (e.g., {'type': 'role', 'value': 'Administrators'})")
+    
+    @field_validator("issue_key")
+    def validate_issue_key(cls, v: str) -> str:
+        if not v or not "-" in v:
+            raise ValueError("Issue key must be in format PROJECT-123")
+        return v.upper()
+    
+    @field_validator("comment")
+    def validate_comment(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Comment cannot be empty")
+        return v.strip()
+
 class CloneIssueArgs(BaseModel):
     """Arguments for the clone_issue tool."""
     source_issue_key: str = Field(description="The source JIRA issue key to clone from (e.g., PROJ-123)")
@@ -498,6 +516,45 @@ class JiraClient:
             logger.error(f"Error getting projects: {str(e)}")
             return {"error": f"Error getting projects: {str(e)}"}
 
+    def add_comment(self, args: CommentArgs) -> Dict[str, Any]:
+        """Add a comment to a JIRA issue."""
+        logger.info(f"Adding comment to issue {args.issue_key}")
+        
+        try:
+            if not self._client:
+                if not self.connect():
+                    return {"error": "Not connected to JIRA"}
+            
+            # Get the issue to verify it exists
+            issue = self.client.issue(args.issue_key)
+            
+            # Add the comment using the client's add_comment method
+            if args.visibility:
+                comment = self.client.add_comment(
+                    issue=args.issue_key,
+                    body=args.comment,
+                    visibility=args.visibility
+                )
+            else:
+                comment = self.client.add_comment(
+                    issue=args.issue_key,
+                    body=args.comment
+                )
+            
+            logger.info(f"Successfully added comment to {args.issue_key}")
+            return {
+                "id": comment.id,
+                "issue_key": args.issue_key,
+                "body": comment.body,
+                "author": comment.author.displayName if hasattr(comment.author, 'displayName') else comment.author.name,
+                "created": str(comment.created),
+                "updated": str(comment.updated) if hasattr(comment, 'updated') else None
+            }
+            
+        except Exception as e:
+            logger.error(f"Error adding comment: {str(e)}")
+            return {"error": f"Error adding comment: {str(e)}"}
+    
     def log_work(self, args: LogWorkArgs) -> Dict[str, Any]:
         """Log work on a JIRA issue."""
         logger.info(f"Logging work on issue {args.issue_key}: {args.time_spent}")
@@ -953,6 +1010,39 @@ async def clone_issue(arguments: Dict[str, Any]) -> bytes:
         logger.error(f"Error in clone_issue tool: {str(e)}", exc_info=True)
         return json.dumps({"error": str(e)}).encode()
 
+async def add_comment(arguments: Dict[str, Any]) -> bytes:
+    """
+    Add a comment to a JIRA issue.
+    
+    Args:
+        arguments: A dictionary with:
+            - issue_key (str): The JIRA issue key (e.g., PROJ-123)
+            - comment (str): Comment text to add to the issue
+            - visibility (Dict[str, str], optional): Visibility settings for the comment (e.g., {'type': 'role', 'value': 'Administrators'})
+    """
+    try:
+        # Log raw arguments for debugging
+        logger.debug(f"add_comment raw arguments: {arguments}")
+        
+        # Parse and validate arguments
+        args = CommentArgs(**arguments)
+        logger.debug(f"add_comment validated arguments: {args}")
+        
+        # Get JIRA configuration
+        config = JiraConfig()
+        client = JiraClient(config)
+        
+        # Add the comment
+        result = client.add_comment(args)
+        
+        logger.debug(f"Generated response: {result}")
+        
+        # Return the response as a JSON string
+        return json.dumps(result).encode()
+    except Exception as e:
+        logger.error(f"Error in add_comment tool: {str(e)}", exc_info=True)
+        return json.dumps({"error": str(e)}).encode()
+
 async def log_work(arguments: Dict[str, Any]) -> bytes:
     """
     Log work time on a JIRA issue.
@@ -1046,6 +1136,29 @@ Example JQL queries:
 - "project = EHEALTHDEV AND status = 'In Progress'"
 - "assignee = currentUser() ORDER BY created DESC"
 - "priority = Major AND created >= startOfDay(-7)"
+"""
+    )
+    mcp.add_tool(
+        add_comment,
+        name="add_comment",
+        description="""Add a comment to a JIRA issue.
+
+Required parameters:
+- issue_key: The JIRA issue key (e.g., PROJ-123)
+- comment: Comment text to add to the issue
+
+Optional parameters:
+- visibility: Visibility settings for the comment (e.g., {'type': 'role', 'value': 'Administrators'})
+
+Example:
+{
+    "issue_key": "PROJ-123",
+    "comment": "This is a comment added via the MCP server",
+    "visibility": {
+        "type": "group",
+        "value": "jira-developers"
+    }
+}
 """
     )
     mcp.add_tool(
