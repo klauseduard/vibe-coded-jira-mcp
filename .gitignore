@@ -45,3 +45,6 @@ htmlcov/
 # Cache
 .cache/
 .pytest_cache/ .env
+
+# Security documentation
+SECURITY_TODO.md

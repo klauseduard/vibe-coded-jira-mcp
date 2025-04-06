@@ -118,3 +118,43 @@ Current version: v0.4
 ## License
 
 MIT 
+
+## Security Considerations
+
+This tool is primarily designed for personal workflow automation and individual developer use. Please be aware of the following security considerations:
+
+### ⚠️ Usage Recommendations
+
+- **Personal/Development Use**: Ideal for individual developers managing their JIRA workflows
+- **Small Team Use**: Suitable for trusted team environments with proper security measures
+- **NOT Recommended For**:
+  - Production deployment in its current form
+  - Multi-tenant environments
+  - Public-facing services
+  - Processing sensitive/regulated data
+
+### 🔒 Security Requirements
+
+If you choose to use this tool, please ensure:
+
+1. Your JIRA instance uses HTTPS
+2. You're using API tokens (not passwords) for authentication
+3. Your `.env` file is properly secured and not committed to version control
+4. You understand the risks of running third-party tools with JIRA access
+
+### 🛡️ Best Practices
+
+1. Regularly rotate your API tokens
+2. Monitor your JIRA audit logs for unexpected activity
+3. Use the most recent version of the tool
+4. Review the code before use in your environment
+
+### 📝 Note on Enterprise Usage
+
+This tool is not currently hardened for enterprise security requirements. If you need a solution for enterprise deployment, consider:
+- Implementing additional security controls
+- Conducting a security review
+- Contributing security improvements back to the project
+- Using official enterprise-grade alternatives
+
+For security-related concerns or to report vulnerabilities, please open an issue or contact the maintainers directly. 
