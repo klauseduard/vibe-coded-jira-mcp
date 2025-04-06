@@ -251,7 +251,9 @@ class JiraClient:
         try:
             self._client = JIRA(
                 server=self.config.jira_url,
-                basic_auth=(self.config.jira_username, self.config.jira_api_token)
+                basic_auth=(self.config.jira_username, self.config.jira_api_token),
+                verify=True,
+                options={'verify': True}
             )
             # Test connection by getting server info
             self._client.server_info()
