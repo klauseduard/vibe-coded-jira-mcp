@@ -48,3 +48,6 @@ htmlcov/
 
 # Security documentation
 SECURITY_TODO.md
+
+# Cursor Rules
+#.cursor/rules/
