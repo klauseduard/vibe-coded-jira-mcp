@@ -44,7 +44,7 @@ Completed: Search functionality is working with JQL, pagination, and field selec
 - [x] Add dedicated `add_comment` tool for adding comments to issues
 - [x] Add `log_work` tool for time tracking
 - [x] Add `clone_issue` tool for working around mandatory fields
-- [ ] Add `get_comments` tool to read issue comments 
+- [x] Add `get_comments` tool to read issue comments 
 - [ ] Add ability to fetch attachments (including images) from issues
 - [ ] Add template support for common issue types
 Success criteria: Can create, update, and clone issues with all necessary fields ✅
@@ -76,14 +76,27 @@ Completed so far: Basic project listing and metadata retrieval implemented
 Success criteria: Fast and reliable operations
 
 ### 7. Enhanced Security (v0.8)
-- [ ] Add API key verification
-- [ ] Add secure credential handling
-- [ ] Add environment variable validation
-- [ ] Add connection state management
-- [ ] Add proper error messages for auth failures
+- [ ] Enhance connection security measures
+- [ ] Implement secure credential management
+- [ ] Add environment validation safeguards
+- [ ] Improve error handling for security events
+- [ ] Add security-focused logging
 Success criteria: Secure and robust access to JIRA API
 
-### 8. Advanced Transport (v0.9)
+### 8. Code Organization and Maintenance (NEW)
+- [ ] Split JiraClient into focused modules:
+  - [ ] core.py: Base client and connection handling
+  - [ ] issues.py: Issue-related operations
+  - [ ] projects.py: Project management
+  - [ ] comments.py: Comment handling
+  - [ ] worklog.py: Time tracking
+- [ ] Create dedicated config module
+- [ ] Implement proper dependency injection
+- [ ] Add interface definitions
+- [ ] Create utility modules for common operations
+Success criteria: Maintainable, modular codebase with clear separation of concerns
+
+### 9. Advanced Transport (v0.9)
 - [ ] Add SSE transport support
 - [ ] Update mcp.json for SSE configuration
 - [ ] Add proper connection handling
@@ -91,7 +104,7 @@ Success criteria: Secure and robust access to JIRA API
 - [ ] Add transport-specific error handling
 Success criteria: Stable alternative transport options
 
-### 9. Production Readiness (v1.0)
+### 10. Production Readiness (v1.0)
 - [ ] Add comprehensive metrics
 - [ ] Add health checks
 - [ ] Add performance monitoring
@@ -148,3 +161,50 @@ Final implementation should:
 3. Handle errors gracefully
 4. Maintain secure connections
 5. Provide good developer experience 
+
+## Refactoring Structure
+
+```
+jira_mcp/
+├── __init__.py
+├── core/
+│   ├── __init__.py
+│   ├── client.py        # Base JIRA client
+│   ├── config.py        # Configuration management
+│   └── exceptions.py    # Custom exceptions
+├── models/
+│   ├── __init__.py
+│   ├── issue.py        # Issue-related models
+│   ├── project.py      # Project-related models
+│   └── common.py       # Shared model definitions
+├── operations/
+│   ├── __init__.py
+│   ├── issues.py       # Issue operations
+│   ├── projects.py     # Project operations
+│   ├── comments.py     # Comment operations
+│   └── worklog.py      # Time tracking operations
+├── utils/
+│   ├── __init__.py
+│   ├── logging.py      # Logging utilities
+│   ├── validation.py   # Input validation
+│   └── security.py     # Security utilities
+└── transport/
+    ├── __init__.py
+    ├── base.py         # Transport interface
+    ├── stdio.py        # STDIO implementation
+    └── sse.py          # SSE implementation
+```
+
+### Refactoring Benefits
+- Improved maintainability through separation of concerns
+- Better testability with focused modules
+- Easier to implement new features
+- Clear module boundaries and responsibilities
+- Simplified dependency management
+
+### Refactoring Approach
+1. Create new structure while keeping current functionality
+2. Move code gradually, one module at a time
+3. Maintain backward compatibility during transition
+4. Add tests for each new module
+5. Update documentation as modules move 
