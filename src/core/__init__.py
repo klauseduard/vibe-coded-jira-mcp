@@ -1,5 +1,5 @@
 """
-Core JIRA client package.
+Core JIRA client implementation.
 """
 from .client import JiraClient, JiraError
 from .config import JiraConfig
