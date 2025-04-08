@@ -83,18 +83,20 @@ Success criteria: Fast and reliable operations
 - [ ] Add security-focused logging
 Success criteria: Secure and robust access to JIRA API
 
-### 8. Code Organization and Maintenance (NEW)
-- [ ] Split JiraClient into focused modules:
-  - [ ] core.py: Base client and connection handling
+### 8. Code Organization and Maintenance (NEW) 🚧
+- [x] Split JiraClient into focused modules:
+  - [x] core.py: Base client and connection handling
   - [ ] issues.py: Issue-related operations
   - [ ] projects.py: Project management
   - [ ] comments.py: Comment handling
   - [ ] worklog.py: Time tracking
-- [ ] Create dedicated config module
+- [x] Create dedicated config module
 - [ ] Implement proper dependency injection
 - [ ] Add interface definitions
 - [ ] Create utility modules for common operations
 Success criteria: Maintainable, modular codebase with clear separation of concerns
+
+Current progress: Initial core module refactoring completed (PR #2)
 
 ### 9. Advanced Transport (v0.9)
 - [ ] Add SSE transport support
