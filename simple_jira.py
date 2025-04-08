@@ -252,16 +252,18 @@ class JiraClient:
             self._client = JIRA(
                 server=self.config.jira_url,
                 basic_auth=(self.config.jira_username, self.config.jira_api_token),
-                verify=True,
-                options={'verify': True}
+                options={
+                    'verify': True,
+                    'headers': {
+                        'Accept': 'application/json'
+                    }
+                }
             )
-            # Test connection by getting server info
-            self._client.server_info()
-            logger.info(f"Connected to JIRA at {self.config.jira_url}")
+            logger.info("Successfully connected to JIRA")
             return True
         except Exception as e:
             logger.error(f"Failed to connect to JIRA: {str(e)}")
-            return False
+            raise JiraError(f"Failed to connect to JIRA: {str(e)}")
     
     @property
     def client(self) -> Optional[JIRA]:
