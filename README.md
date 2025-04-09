@@ -100,6 +100,47 @@ Run the server:
 
 ## Development
 
+The project follows a modular structure:
+
+```
+src/
+├── core/           # Core JIRA client implementation
+│   ├── __init__.py
+│   ├── client.py   # JiraClient class
+│   └── config.py   # Configuration management
+├── models/         # Pydantic models for validation
+│   ├── __init__.py
+│   ├── comment.py  # Comment-related models
+│   ├── issue.py    # Issue-related models
+│   └── worklog.py  # Worklog-related models
+└── operations/     # MCP operation implementations
+    ├── __init__.py
+    ├── comments.py # Comment operations
+    ├── issues.py   # Issue operations
+    ├── projects.py # Project operations
+    └── worklog.py  # Worklog operations
+```
+
+### Key Components
+
+1. **Models** (`src/models/`)
+   - `IssueType`, `IssueArgs` - Issue creation/update models
+   - `IssueTransitionArgs` - Issue state transition model
+   - `CloneIssueArgs` - Issue cloning model
+   - `CommentArgs`, `GetCommentsArgs` - Comment models
+   - `LogWorkArgs` - Work logging model
+
+2. **Core** (`src/core/`)
+   - `JiraClient` - Main JIRA API client
+   - `JiraConfig` - Configuration management
+   - Error handling and logging
+
+3. **Operations** (`src/operations/`)
+   - Issue management (get, search, create, update, clone)
+   - Comment handling (add, get)
+   - Work logging
+   - Project listing
+
 The project follows the implementation plan outlined in `IMPLEMENTATION_PLAN.md`.
 
 Current version: v0.4
