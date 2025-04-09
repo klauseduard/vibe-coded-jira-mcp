@@ -9,16 +9,33 @@ The system follows a layered architecture pattern, with clear separation of conc
 ```mermaid
 graph TD
     A[CLI Interface] -->|Typer Commands| B[FastMCP Server]
-    B -->|MCP Tools| C[JiraClient]
-    C -->|JIRA API| D[JIRA Server]
+    B -->|MCP Tools| C[Operations Layer]
+    C -->|Core| D[JiraClient]
+    D -->|API| E[JIRA Server]
     
-    subgraph Data Models
-        E[Pydantic Models]
-        F[Configuration]
+    subgraph Models
+        F[Issue Models]
+        G[Comment Models]
+        H[Worklog Models]
+        I[Config Models]
     end
     
-    C -->|Uses| E
-    C -->|Uses| F
+    subgraph Operations
+        J[Issue Ops]
+        K[Comment Ops]
+        L[Worklog Ops]
+        M[Project Ops]
+    end
+    
+    C -->|Uses| J
+    C -->|Uses| K
+    C -->|Uses| L
+    C -->|Uses| M
+    
+    J -->|Uses| F
+    K -->|Uses| G
+    L -->|Uses| H
+    D -->|Uses| I
 ```
 
 ### Component Breakdown
@@ -33,31 +50,48 @@ graph TD
    - Manages tool registration and execution
    - Handles communication between Cursor IDE and JIRA
 
-3. **JiraClient**
-   - Encapsulates all JIRA API interactions
+3. **Operations Layer** (`src/operations/`)
+   - Implements MCP tool operations
+   - Handles request/response formatting
+   - Manages error handling and logging
+   - Validates input using Pydantic models
+
+4. **Core Layer** (`src/core/`)
+   - `JiraClient`: Encapsulates JIRA API interactions
+   - `JiraConfig`: Manages configuration
    - Handles authentication and request formatting
-   - Manages error handling and retries
+   - Implements error handling and retries
 
-4. **Data Models**
-   - Pydantic models ensure data validation
-   - Configuration management through environment variables
-   - Type-safe data structures for API requests/responses
+5. **Models Layer** (`src/models/`)
+   - Issue-related models (`IssueType`, `IssueArgs`, etc.)
+   - Comment models (`CommentArgs`, `GetCommentsArgs`)
+   - Worklog models (`LogWorkArgs`)
+   - Configuration models (`JiraConfig`)
+   - Ensures data validation and type safety
 
-### About Pydantic
+### About Pydantic Models
 
-Pydantic is a data validation library for Python that uses Python type annotations to validate data. In this project, it's used to:
+Our models are organized by domain and provide:
 
-- Validate input data before sending to JIRA API
-- Ensure type safety throughout the application
-- Provide automatic data conversion and validation
-- Generate JSON schemas for API documentation
-- Handle configuration management
+1. **Issue Models** (`models/issue.py`)
+   - `IssueType`: Issue type definition
+   - `IssueArgs`: Issue creation/update parameters
+   - `IssueTransitionArgs`: Status transition parameters
+   - `CloneIssueArgs`: Issue cloning parameters
 
-For example, when creating a new issue, Pydantic validates:
-- Required fields are present
-- Field types are correct (e.g., strings, numbers)
-- Custom validation rules (e.g., project key format)
-- Optional fields with default values
+2. **Comment Models** (`models/comment.py`)
+   - `CommentArgs`: Comment creation parameters
+   - `GetCommentsArgs`: Comment retrieval parameters
+
+3. **Worklog Models** (`models/worklog.py`)
+   - `LogWorkArgs`: Work logging parameters
+   - Time format validation
+   - Issue key validation
+
+4. **Configuration** (`core/config.py`)
+   - `JiraConfig`: JIRA connection settings
+   - Environment variable management
+   - Credential handling
 
 ## Issue Lifecycle
 
