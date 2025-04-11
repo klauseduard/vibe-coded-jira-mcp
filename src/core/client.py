@@ -9,6 +9,7 @@ from .config import JiraConfig
 from ..models.comment import CommentArgs, GetCommentsArgs
 from ..models.worklog import LogWorkArgs
 from ..models.issue import CloneIssueArgs, IssueArgs, IssueTransitionArgs
+from ..utils.rate_limit import rate_limited
 
 logger = logging.getLogger("simple_jira")
 
@@ -24,12 +25,38 @@ class JiraClient:
         self.config = config
         self._client = None
         self._verify_config()
+        
+        # Apply rate limiting to all JIRA API methods
+        self._apply_rate_limiting()
     
     def _verify_config(self):
         """Verify the configuration is valid."""
         if not self.config.jira_url or not self.config.jira_username or not self.config.jira_api_token:
             logger.error("JIRA configuration is incomplete")
             raise ValueError("JIRA configuration is incomplete")
+    
+    def _apply_rate_limiting(self):
+        """Apply rate limiting to all JIRA API methods."""
+        methods_to_limit = [
+            'get_issue',
+            'search_issues',
+            'create_issue',
+            'update_issue',
+            'get_projects',
+            'add_comment',
+            'get_comments',
+            'log_work',
+            'clone_issue'
+        ]
+        
+        for method_name in methods_to_limit:
+            if hasattr(self, method_name):
+                original_method = getattr(self, method_name)
+                rate_limited_method = rate_limited(
+                    calls=self.config.rate_limit_calls,
+                    period=self.config.rate_limit_period
+                )(original_method)
+                setattr(self, method_name, rate_limited_method)
     
     def connect(self) -> bool:
         """Connect to the JIRA instance."""
