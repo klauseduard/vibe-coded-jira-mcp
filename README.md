@@ -1,11 +1,12 @@
 # JIRA MCP Server
 
+[![smithery badge](https://smithery.ai/badge/@klauseduard/vibe-coded-jira-mcp)](https://smithery.ai/server/@klauseduard/vibe-coded-jira-mcp)
+
 A simple [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) "vibe-coded" server for integrating JIRA with Cursor IDE. MCP is an open protocol that enables seamless integration between LLM applications and external data sources and tools.
 
 This implementation started out by discarding another JIRA MCP server that we failed to init in Cursor.
 
 BEWARE! Even this document is almost entirely written by AI coding assistant.
-
 
 ## Features
 
@@ -72,6 +73,15 @@ This server implements the [Model Context Protocol](https://modelcontextprotocol
 
 ## Setup
 
+### Installing via Smithery
+
+To install JIRA MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@klauseduard/vibe-coded-jira-mcp):
+
+```bash
+npx -y @smithery/cli install @klauseduard/vibe-coded-jira-mcp --client claude
+```
+
+### Manual Installation
 1. Create a virtual environment:
 ```bash
 python -m venv venv
