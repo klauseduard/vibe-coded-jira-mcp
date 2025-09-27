@@ -45,17 +45,18 @@ class Transport(str, Enum):
 
 # Register tools using modern decorator pattern
 @mcp.tool()
-def get_issue_tool(issue_key: str) -> dict:
+async def get_issue_tool(issue_key: str) -> str:
     """Get a JIRA issue by key."""
-    return get_issue(issue_key)
+    result = await get_issue({"issue_key": issue_key})
+    return result.decode() if result else "{}"
 
 @mcp.tool()
-def search_issues_tool(
+async def search_issues_tool(
     jql: str = "",
     max_results: int = 50,
     start_at: int = 0,
     fields: str = "key,summary,status,assignee,issuetype,priority,created,updated"
-) -> dict:
+) -> str:
     """Search for JIRA issues using JQL (JIRA Query Language).
 
     Args:
@@ -69,10 +70,16 @@ def search_issues_tool(
     - "assignee = currentUser() ORDER BY created DESC"
     - "priority = Major AND created >= startOfDay(-7)"
     """
-    return search_issues(jql, max_results, start_at, fields)
+    result = await search_issues({
+        "jql": jql,
+        "max_results": max_results,
+        "start_at": start_at,
+        "fields": fields
+    })
+    return result.decode() if result else "{}"
 
 @mcp.tool()
-def create_issue_tool(
+async def create_issue_tool(
     project_key: str,
     summary: str,
     description: str = "",
@@ -81,7 +88,7 @@ def create_issue_tool(
     assignee: str = "",
     labels: list = None,
     custom_fields: dict = None
-) -> dict:
+) -> str:
     """Create a new JIRA issue.
 
     Args:
@@ -94,10 +101,20 @@ def create_issue_tool(
         labels: List of labels
         custom_fields: Custom field values
     """
-    return create_issue(project_key, summary, description, issue_type, priority, assignee, labels or [], custom_fields or {})
+    result = await create_issue({
+        "project_key": project_key,
+        "summary": summary,
+        "description": description,
+        "issue_type": issue_type,
+        "priority": priority,
+        "assignee": assignee,
+        "labels": labels or [],
+        "custom_fields": custom_fields or {}
+    })
+    return result.decode() if result else "{}"
 
 @mcp.tool()
-def update_issue_tool(
+async def update_issue_tool(
     issue_key: str,
     summary: str = "",
     description: str = "",
@@ -106,7 +123,7 @@ def update_issue_tool(
     labels: list = None,
     comment: str = "",
     custom_fields: dict = None
-) -> dict:
+) -> str:
     """Update an existing JIRA issue.
 
     Args:
@@ -119,10 +136,20 @@ def update_issue_tool(
         comment: Comment to add to the issue
         custom_fields: Custom field values to update
     """
-    return update_issue(issue_key, summary, description, priority, assignee, labels or [], comment, custom_fields or {})
+    result = await update_issue({
+        "issue_key": issue_key,
+        "summary": summary,
+        "description": description,
+        "priority": priority,
+        "assignee": assignee,
+        "labels": labels or [],
+        "comment": comment,
+        "custom_fields": custom_fields or {}
+    })
+    return result.decode() if result else "{}"
 
 @mcp.tool()
-def clone_issue_tool(
+async def clone_issue_tool(
     source_issue_key: str,
     project_key: str = "",
     summary: str = "",
@@ -134,7 +161,7 @@ def clone_issue_tool(
     custom_fields: dict = None,
     copy_attachments: bool = False,
     add_link_to_source: bool = True
-) -> dict:
+) -> str:
     """Clone an existing JIRA issue.
 
     Args:
@@ -150,10 +177,23 @@ def clone_issue_tool(
         copy_attachments: Whether to copy attachments from the source issue
         add_link_to_source: Whether to add a link to the source issue
     """
-    return clone_issue(source_issue_key, project_key, summary, description, issue_type, priority, assignee, labels or [], custom_fields or {}, copy_attachments, add_link_to_source)
+    result = await clone_issue({
+        "source_issue_key": source_issue_key,
+        "project_key": project_key,
+        "summary": summary,
+        "description": description,
+        "issue_type": issue_type,
+        "priority": priority,
+        "assignee": assignee,
+        "labels": labels or [],
+        "custom_fields": custom_fields or {},
+        "copy_attachments": copy_attachments,
+        "add_link_to_source": add_link_to_source
+    })
+    return result.decode() if result else "{}"
 
 @mcp.tool()
-def add_comment_tool(issue_key: str, comment: str, visibility: dict = None) -> dict:
+async def add_comment_tool(issue_key: str, comment: str, visibility: dict = None) -> str:
     """Add a comment to a JIRA issue.
 
     Args:
@@ -161,10 +201,15 @@ def add_comment_tool(issue_key: str, comment: str, visibility: dict = None) -> d
         comment: Comment text to add to the issue
         visibility: Visibility settings for the comment (e.g., {'type': 'role', 'value': 'Administrators'})
     """
-    return add_comment(issue_key, comment, visibility or {})
+    result = await add_comment({
+        "issue_key": issue_key,
+        "comment": comment,
+        "visibility": visibility or {}
+    })
+    return result.decode() if result else "{}"
 
 @mcp.tool()
-def get_comments_tool(issue_key: str, max_results: int = 50, start_at: int = 0) -> dict:
+async def get_comments_tool(issue_key: str, max_results: int = 50, start_at: int = 0) -> str:
     """Get comments for a JIRA issue.
 
     Args:
@@ -172,10 +217,15 @@ def get_comments_tool(issue_key: str, max_results: int = 50, start_at: int = 0) 
         max_results: Maximum number of comments to return (default: 50, max: 100)
         start_at: Index of the first comment to return (default: 0)
     """
-    return get_comments(issue_key, max_results, start_at)
+    result = await get_comments({
+        "issue_key": issue_key,
+        "max_results": max_results,
+        "start_at": start_at
+    })
+    return result.decode() if result else "{}"
 
 @mcp.tool()
-def log_work_tool(issue_key: str, time_spent: str, comment: str = "", started_at: str = "") -> dict:
+async def log_work_tool(issue_key: str, time_spent: str, comment: str = "", started_at: str = "") -> str:
     """Log work time on a JIRA issue.
 
     Args:
@@ -184,10 +234,16 @@ def log_work_tool(issue_key: str, time_spent: str, comment: str = "", started_at
         comment: Comment for the work log
         started_at: When the work was started (defaults to now)
     """
-    return log_work(issue_key, time_spent, comment, started_at)
+    result = await log_work({
+        "issue_key": issue_key,
+        "time_spent": time_spent,
+        "comment": comment,
+        "started_at": started_at
+    })
+    return result.decode() if result else "{}"
 
 @mcp.tool()
-def get_projects_tool(include_archived: bool = False, max_results: int = 50, start_at: int = 0) -> dict:
+async def get_projects_tool(include_archived: bool = False, max_results: int = 50, start_at: int = 0) -> str:
     """Get list of JIRA projects.
 
     Args:
@@ -195,7 +251,12 @@ def get_projects_tool(include_archived: bool = False, max_results: int = 50, sta
         max_results: Maximum number of results to return (default: 50, max: 100)
         start_at: Index of the first result to return (default: 0)
     """
-    return get_projects(include_archived, max_results, start_at)
+    result = await get_projects({
+        "include_archived": include_archived,
+        "max_results": max_results,
+        "start_at": start_at
+    })
+    return result.decode() if result else "{}"
 
 @app.command()
 def main(
