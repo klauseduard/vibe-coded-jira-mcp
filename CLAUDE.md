@@ -23,7 +23,9 @@ Copy `.env.example` to `.env` and configure:
 
 ## Architecture Overview
 
-This is a Model Context Protocol (MCP) server for JIRA integration, implementing a modular architecture:
+This is a Model Context Protocol (MCP) server for JIRA integration, implementing a modular architecture that supports multiple AI coding assistants.
+
+**For integration setup**: See [AI_INTEGRATION.md](AI_INTEGRATION.md) for complete setup guides.
 
 ### Core Structure
 - **Entry Point**: `simple_jira.py` - FastMCP server with Typer CLI

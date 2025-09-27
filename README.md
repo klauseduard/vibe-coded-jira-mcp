@@ -1,8 +1,8 @@
 # JIRA MCP Server
 
-A simple [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) "vibe-coded" server for integrating JIRA with Cursor IDE. MCP is an open protocol that enables seamless integration between LLM applications and external data sources and tools.
+A simple [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) "vibe-coded" server for integrating JIRA with AI coding assistants. MCP is an open protocol that enables seamless integration between LLM applications and external data sources and tools.
 
-This implementation started out by discarding another JIRA MCP server that we failed to init in Cursor.
+Originally designed for Cursor IDE, this server now supports multiple AI coding assistants including Claude Code and Codex CLI.
 
 BEWARE! Even this document is almost entirely written by AI coding assistant.
 
@@ -68,7 +68,14 @@ For detailed technical architecture and system workflows, including issue lifecy
 
 ## About MCP
 
-This server implements the [Model Context Protocol](https://modelcontextprotocol.io) specification, allowing Cursor IDE to seamlessly interact with JIRA data through its AI features. The protocol standardizes how LLM applications communicate with external data sources and tools.
+This server implements the [Model Context Protocol](https://modelcontextprotocol.io) specification, enabling AI coding assistants to seamlessly interact with JIRA data. The protocol standardizes how LLM applications communicate with external data sources and tools.
+
+## 🚀 Quick Integration
+
+**For AI Assistant Integration**: See **[AI_INTEGRATION.md](AI_INTEGRATION.md)** for complete setup guides for:
+- 🤖 **Claude Code** - Modern MCP integration
+- 🎯 **Cursor IDE** - Original integration (multiple setup options)
+- 🧠 **Codex CLI** - See the Codex CLI section in [AI_INTEGRATION.md](AI_INTEGRATION.md)
 
 ## Setup
 
