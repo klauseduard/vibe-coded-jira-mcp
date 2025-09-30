@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/klauseduard-vibe-coded-jira-mcp-badge.png)](https://mseep.ai/app/klauseduard-vibe-coded-jira-mcp)
+
 # JIRA MCP Server
 
 A simple [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) "vibe-coded" server for integrating JIRA with AI coding assistants. MCP is an open protocol that enables seamless integration between LLM applications and external data sources and tools.
