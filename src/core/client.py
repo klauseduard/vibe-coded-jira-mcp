@@ -406,8 +406,12 @@ class JiraClient:
                 
                 # Add any additional fields that might be useful
                 if hasattr(comment, 'visibility') and comment.visibility:
-                    formatted_comment["visibility"] = comment.visibility
-                    
+                    # Convert PropertyHolder to dict to avoid JSON serialization issues
+                    formatted_comment["visibility"] = {
+                        "type": getattr(comment.visibility, 'type', None),
+                        "value": getattr(comment.visibility, 'value', None)
+                    }
+
                 formatted_comments.append(formatted_comment)
                 
             return {
